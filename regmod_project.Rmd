@@ -1,0 +1,92 @@
+---
+title: "Regression Models Class Project"
+author: "Yakov Falkovich"
+date: "Tuesday, September 22, 2015"
+output: html_document
+---
+## Executive Summary
+Text of exec sum goes here
+
+```{r echo=FALSE}
+library(datasets)
+library(ggplot2)
+library(reshape2)
+data(mtcars)
+```
+
+## Exploratory Analysis and naive model
+Boxplots are in figure 1, we see clearly that most manuals have higher MPG. Let's look at a single variable regression:
+```{r echo=FALSE}
+summary(lm(mpg~am,data=mtcars))$coeff
+```
+The average manual car gets  7.245 more miles per gallon, and it's highly significant so it's a good bet that connection exists and confounders won't destroy it.
+
+## Evaluating possible confounding variables
+To simplify, we look at the correlation matrix for MPG and AM in figure 2.  
+Variables that have large correlations in the same direction with both mpg and am in the same direction could account for the effect and including them in the model may reduce it.
+CARB and VS have weak correlations with AM so probably don't confound it a lot.
+QSEC and HP also have weak correlations and besides they measure outcomes and not inputs. They should only be meaningful if they represent some exogenous variable (like aerodynamics - if sleeker cars with high QSEC and MPG tend to be automatic).
+WT, GEAR, DRAT, DISP, CYL have strong correlations in the same direction, so may be important.
+
+## Model generation and comparison
+Let's compare the simplest model, the one with the 5 likely confounders and one with all possible confounders.
+```{r}
+fit1=lm(mpg~am,data=mtcars)
+fit2=lm(mpg~am+wt+disp+cyl+gear+drat,data=mtcars)
+fit3=lm(mpg~.,data=mtcars)
+print(anova(fit1,fit2,fit3),signif.stars=F)
+```
+Clearly the extra covariates in the third model add no explanatory power. A closer look at the model including the 5 covariates (figure 3) shows that only weight and cylinders are significant. 
+
+We can try including some interaction effects to find the best model:
+```{r echo=FALSE}
+fit4=lm(mpg~am*wt,data=mtcars)
+fit5=lm(mpg~am*wt+cyl,data=mtcars)
+fit6=lm(mpg~am*wt*cyl,data=mtcars)
+print(anova(fit4,fit5,fit6),signif.stars=F)
+```
+We see that Model 5, the one  that includes only the interaction between transmission and weight is the best, explaining over 85% of the variance in MPG with only 4 variables, all of whom are significant at the 0.1% level (figure 4).
+
+## Diagnostics
+Figure 5 shows the plots of the residual diagnostics for the chosen model. The residuals are symmetrical and evenly distributed, supporting the assumption of heteroskedasticity. They are also close to the diagonal on the Normal Q-Q plot, supporting the assumption of normality.  
+
+A few car show up as consistent outliers (Fiat 128, Toyota Corolla, Datsun), we can estimate the effect of excluding them from the data that we model.
+```{r}
+round(dfbetas(fit5),3)[c(3,18,20),]
+round(hatvalues(fit5),3)[c(3,18,20)]
+```
+The Toyota and Fiat have positive dfbetas for AM (which itself has a positive coefficient), so excluding them will show a smaller but still significant effect of AM on MPG. Since all three cars have lower influence scores than the average $bar{h_{ii}}=0.156$ their effect on the overall model isn't large and they should probably not be excluded.
+
+## Conclusion  
+Manuals get higher MPG, almost 12 miles per gallons on average. This effect is moderated by weight as heavier cars see a smaller increase in MPG, with each 1000 lbs added reducing the MPG gain of manual transmission by 4 MPG.  
+
+---
+# Appendix - Figures and Charts  
+
+## Figure 1: Boxplot of MPGs for automatic and manual cars
+```{r echo=FALSE}
+ggplot(data=mtcars)+geom_boxplot(aes(factor(am),mpg,fill=factor(am)))+labs(title="MPG for manual automatic cars",x="Trasmission", y="MPG")+theme(legend.position="none")+scale_x_discrete(labels=c("Automatic","Manual"))
+```
+
+## Figure 2: Heatmap of covariates and correlations
+```{r echo=FALSE}
+cormt=cor(mtcars)
+melmt=melt(cormt[,c(1,9)])
+ggplot(data=melmt,aes(x=Var1,y=Var2,fill=value)) + geom_tile(color="black") + scale_fill_gradient2(low="brown3",high="chartreuse3",mid="white",limit=c(-1,1))+geom_text(aes(Var1,Var2,label=round(value,2)),size=4,color="black")+labs(title="MPG and Transmission Covariates", x="",y="Covariates",fill="Correlation")
+```
+
+## Figure 3: Fitted regression with 5 covariates
+```{r echo=FALSE}
+summary(fit2)$coeff
+```
+
+## Figure 4: Model 5 - 2 covariates and one interaction
+```{r echo=FALSE}
+summary(fit5)
+```
+
+## Figure 5: Residual diagnostics for Model 5
+```{r echo=FALSE}
+par(mfrow=c(2,2))
+plot(fit5)
+```
