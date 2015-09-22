@@ -1,0 +1,52 @@
+---
+title: "Statistical Inference - Project Part 1"
+author: "Yakov Falkovich"
+date: "Wednesday, September 09, 2015"
+output: pdf_document
+---
+# Simulation
+I'm simulating the mean of 40 exponentially distributed variables with $\lambda=0.2$ 1000 times:
+```{r}
+set.seed(1)
+meansim = sapply(c(1:1000), function(i) {mean(rexp(40,0.2))})
+```
+
+The result of the simulation looks like:
+```{r,echo=FALSE} 
+head(meansim) 
+```
+
+The expected mean of this sample is simply the mean of an exponential variable, $1/\lambda=5$. The sample mean is 
+```{r} 
+round(mean(meansim),2)
+```
+
+A single exponential variable has variance $\sigma^2 = 1/\lambda^2$ so a mean of $N=40$ variables should have variance $\sigma^2/N = \frac{1}{\lambda^2 \cdot N} = \frac{1}{0.2^2 \cdot 40} = 0.625$. The variance of the sample is in fact is 
+```{r}
+round(var(meansim),2)
+```
+
+Both parameters are in fact very close to their expected values.  
+
+---
+#Testing for Normality
+Let's compare the distributions of 1000 means of 40 exponential variables with 1000 unaveraged exponential variables.
+
+First we normalize the results by subtracting the expected mean and dividing by the expected standard 
+```{r}
+meannorm=(meansim-5)/(5/sqrt(40))
+```
+```{r, echo = FALSE, fig.width=5, fig.height = 6, fig.align='center'}
+library(ggplot2)
+q1<-qplot(meannorm, geom = 'blank')+geom_histogram(aes(x=meannorm,y=..density..),binwidth=.3,fill="cornflowerblue",color="black")+stat_function(fun = dnorm, size = 1.5,color="green4")
+print(q1)
+```
+Compare that to 1000 samples of a normalized exponential variable:
+```{r}
+expsim=rexp(1000,0.2)
+```
+```{r, echo = FALSE, fig.width=5, fig.height = 6, fig.align='center'}
+dexp = function(x) {0.2*exp(-x*0.2)}
+q2<-qplot(expsim, geom = 'blank')+geom_histogram(aes(x=expsim,y=..density..),binwidth=2,fill="brown1",color="black")+stat_function(fun = dexp, size = 1.5,color="green4")
+print(q2)
+```
