@@ -68,24 +68,26 @@ img {
 
 
 <div id="executive-summary" class="section level2">
-<h2>Executive Summary</h2>
-<p>Text of exec sum goes here</p>
+<h2>Executive summary</h2>
+<p>The goal of this project is to discover and quantify the effect of transmission type (automatic or manual) on car fuel economy (measured in MPG). A simple model demonstrates that MPG and transmission are in fact connected, more complex models are built by adding highly correlated variables and then narrowing down on the simplest model that explains the most data using ANOVA.</p>
+<p>The chosen best model accounts for almost the entire variance in MPG (86%) using 4 significant variables: AM (transmission), # of cylinders, weight, and the interaction between AM and weight. AM has a positive coefficient of 11.94, since it’s coded as 1 for manual cars and 0 for automatic this means that holding weight and cylinders constant manual cars get almost 12 MPG more compared to automatic ones. The interaction variable is negative -4.19, showing that heavier cars see a lower MPG gain from manual transmission, while still being positive.</p>
 </div>
 <div id="exploratory-analysis-and-naive-model" class="section level2">
-<h2>Exploratory Analysis and naive model</h2>
-<p>Boxplots are in figure 1, we see clearly that most manuals have higher MPG. Let’s look at a single variable regression:</p>
+<h2>Exploratory analysis and naive model</h2>
+<p>The first step of analysis is comparing MPG numbers between manual and automatic cars, the boxplots are shown in figure 1. These shoe clearly that most manuals cars have a much higher MPG result.</p>
+<p>Let’s look at a single variable regression for a first approximation of the effect:</p>
 <pre><code>##              Estimate Std. Error   t value     Pr(&gt;|t|)
 ## (Intercept) 17.147368   1.124603 15.247492 1.133983e-15
 ## am           7.244939   1.764422  4.106127 2.850207e-04</code></pre>
-<p>The average manual car gets 7.245 more miles per gallon, and it’s highly significant so it’s a good bet that connection exists and confounders won’t destroy it.</p>
+<p>The average manual car gets 7.245 more miles per gallon compared to an automatic. It’s highly significant, so it’s a good bet that the effect actually exists and isn’t a byproduct of confounders.</p>
 </div>
 <div id="evaluating-possible-confounding-variables" class="section level2">
 <h2>Evaluating possible confounding variables</h2>
-<p>To simplify, we look at the correlation matrix for MPG and AM in figure 2.<br />Variables that have large correlations in the same direction with both mpg and am in the same direction could account for the effect and including them in the model may reduce it. CARB and VS have weak correlations with AM so probably don’t confound it a lot. QSEC and HP also have weak correlations and besides they measure outcomes and not inputs. They should only be meaningful if they represent some exogenous variable (like aerodynamics - if sleeker cars with high QSEC and MPG tend to be automatic). WT, GEAR, DRAT, DISP, CYL have strong correlations in the same direction, so may be important.</p>
+<p>To simplify, we look at the correlation matrix for MPG and AM in figure 2.<br />Variables that have large correlations with both MPG and AM could affect the model significantly. CARB and VS have weak correlations with AM so probably don’t confound it a lot. QSEC and HP also have weak correlations and besides they measure outcomes of the car (speed and power) and not inputs. They should only be meaningful if they represent some exogenous variable (like aerodynamics - if sleeker cars with high QSEC and MPG tend to be automatic), they cannot by themselves be common causes of AM and MPG thus causing spurious correlations. WT, GEAR, DRAT, DISP, CYL have strong correlations with the same sign for AM and MPG, so those variables may have a large effect on the AM-MPG connection and could even reverse it. All of those 5 likely confounders must be tested by including them in models.</p>
 </div>
 <div id="model-generation-and-comparison" class="section level2">
 <h2>Model generation and comparison</h2>
-<p>Let’s compare the simplest model, the one with the 5 likely confounders and one with all possible confounders.</p>
+<p>Let’s compare the simplest model, the one with the 5 likely confounders and one with all 9 possible confounders.</p>
 <pre class="r"><code>fit1=lm(mpg~am,data=mtcars)
 fit2=lm(mpg~am+wt+disp+cyl+gear+drat,data=mtcars)
 fit3=lm(mpg~.,data=mtcars)
@@ -100,7 +102,7 @@ print(anova(fit1,fit2,fit3),signif.stars=F)</code></pre>
 ## 2     25 182.10  5    538.80 15.3426 2.127e-06
 ## 3     21 147.49  4     34.61  1.2318    0.3276</code></pre>
 <p>Clearly the extra covariates in the third model add no explanatory power. A closer look at the model including the 5 covariates (figure 3) shows that only weight and cylinders are significant.</p>
-<p>We can try including some interaction effects to find the best model:</p>
+<p>We include some interaction effects to find the best model:</p>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Model 1: mpg ~ am * wt
@@ -110,7 +112,7 @@ print(anova(fit1,fit2,fit3),signif.stars=F)</code></pre>
 ## 1     28 188.01                             
 ## 2     27 138.51  1    49.502 9.2457 0.005633
 ## 3     24 128.50  3    10.008 0.6230 0.607012</code></pre>
-<p>We see that Model 5, the one that includes only the interaction between transmission and weight is the best, explaining over 85% of the variance in MPG with only 4 variables, all of whom are significant at the 0.1% level (figure 4).</p>
+<p>We see that Model 5, the one that includes only the interaction between transmission and weight is the best, explaining over 85% of the variance in MPG with only 4 variables, all of whom are significant at the 0.1% level (figure 4). This is very likely the simplest, most parsimonious model that explains such a high percentage of variance in MPG.</p>
 </div>
 <div id="diagnostics" class="section level2">
 <h2>Diagnostics</h2>
@@ -128,7 +130,9 @@ print(anova(fit1,fit2,fit3),signif.stars=F)</code></pre>
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>Manuals get higher MPG, almost 12 miles per gallons on average. This effect is moderated by weight as heavier cars see a smaller increase in MPG, with each 1000 lbs added reducing the MPG gain of manual transmission by 4 MPG.</p>
+<p>We have arrived at a model of miles per gallon as a function of transmission type, weight and number of cylinders. The model is significant, powerful (predicting 85% of the variance) and parsimonious (contains no insignificant variables). The residual distribution satisfies the assumptions that linear regression makes, and there aren’t any outliers with outsize influence on the results.</p>
+<p>The 11.94 coefficient for AM means that holding weight and number of cylinders, a manual transmission car gets 11.94 MPG more than an automatic one. The error around that coefficient is 3.85, so we can give a 95% confidence interval for the MPG gain of a manual car as being between 4.05 and 19.83.</p>
+<p>The -4.19 interaction coefficient between weight and AM means that increasing weight by 1000 lbs will reduce the MPG gain of a manual car by 4.19 MPG. Since this number is much smaller than 11.94, we expect that even heavier cars will gain mpg from having a manual transmission. Another way of looking at the same coefficient is that switching to a manual transmission exacerbates the effect of weight on MPG, causing heavier manual cars to have a significantly lower MPG compared to lighter manual cars.</p>
 <hr />
 </div>
 <div id="appendix---figures-and-charts" class="section level1">
